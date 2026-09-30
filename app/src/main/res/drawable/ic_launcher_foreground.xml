@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two points of the board, one checker of each side at their feet. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#111111"
+        android:pathData="M31,78 L42,30 L53,78 z" />
+    <path
+        android:fillColor="#D9D3C3"
+        android:strokeColor="#111111"
+        android:strokeWidth="2.5"
+        android:pathData="M55,78 L66,30 L77,78 z" />
+    <path
+        android:fillColor="#D62E1F"
+        android:strokeColor="#111111"
+        android:strokeWidth="2.5"
+        android:pathData="M34,60 h16 v16 h-16 z" />
+    <path
+        android:fillColor="#0F4CD1"
+        android:strokeColor="#111111"
+        android:strokeWidth="2.5"
+        android:pathData="M66,68 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+</vector>
