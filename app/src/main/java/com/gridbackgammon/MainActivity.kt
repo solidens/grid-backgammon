@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                     } else {
+                        val license by vm.license.collectAsStateWithLifecycle()
                         HomeScreen(
                             setup = setup,
                             onVariant = vm::setVariant,
@@ -49,6 +50,18 @@ class MainActivity : ComponentActivity() {
                             onHaptics = vm::setHaptics,
                             onStart = {
                                 vm.newGame(fresh = true)
+                                inGame = true
+                            },
+                            onlineAvailable = vm.onlineAvailable,
+                            license = license,
+                            onLicense = vm::setLicense,
+                            onOnline = vm::setOnline,
+                            onHost = {
+                                vm.host()
+                                inGame = true
+                            },
+                            onJoin = { code ->
+                                vm.join(code)
                                 inGame = true
                             },
                         )

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Signing credentials live outside the repository. When they are absent -- a
@@ -24,6 +25,11 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        // Where online play lives, and where a key is bought. Set in
+        // gradle.properties; an empty server URL hides online play altogether.
+        buildConfigField("String", "ONLINE_URL", "\"${providers.gradleProperty("grid.online.url").getOrElse("")}\"")
+        buildConfigField("String", "GUMROAD_URL", "\"${providers.gradleProperty("grid.gumroad.url").getOrElse("")}\"")
     }
 
     signingConfigs {
@@ -39,6 +45,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The emulator's name for the laptop it runs on, where the server is started by hand.
+            buildConfigField("String", "ONLINE_URL", "\"ws://10.0.2.2:8080/play\"")
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
                 .takeIf { keystoreProperties.getProperty("storeFile") != null }
@@ -54,7 +64,10 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
@@ -75,6 +88,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.tooling.preview)
     debugImplementation(libs.androidx.ui.tooling)
+
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
 }

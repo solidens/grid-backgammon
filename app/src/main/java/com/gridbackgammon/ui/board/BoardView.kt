@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -89,6 +90,8 @@ data class BoardRender(
     val targets: Set<Int> = emptySet(),
     /** Whether a tap on the board throws the dice. */
     val rollable: Boolean = false,
+    /** Upside down, so Blue's checkers are the near ones: for the phone that plays Blue online. */
+    val flipped: Boolean = false,
 ) {
     constructor(state: GameState) : this(
         variant = state.variant,
@@ -98,6 +101,7 @@ data class BoardRender(
         selected = if (state.live) state.selected?.let { place(state.variant, state.turn, it) } else null,
         targets = if (state.live) state.paths.keys.mapTo(HashSet()) { place(state.variant, state.turn, it) } else emptySet(),
         rollable = state.phase == Phase.ROLL && if (state.opening) state.note != Note.TIE else state.humanTurn,
+        flipped = state.bottom == Player.BLUE,
     )
 }
 
@@ -239,13 +243,19 @@ fun BackgammonBoard(
                         }
                         if (s.sources.isEmpty()) return@detectTapGestures
                         val unit = size.width / Geometry.COLUMNS.toFloat()
-                        val place = Geometry.snap(s.variant, at.x / unit, at.y / unit, s.sources + s.targets)
+                        val y = if (s.flipped) Geometry.HEIGHT - at.y / unit else at.y / unit
+                        val place = Geometry.snap(s.variant, at.x / unit, y, s.sources + s.targets)
                         tap(place?.let { pos(s.variant, s.turn, it) })
                     }
                 },
         ) {
             val unit = size.width / Geometry.COLUMNS
-            drawBoard(render.variant, unit, glow, hair, rule)
+            // Flipped, the board itself is mirrored top to bottom, but the
+            // checkers are only moved: their shadows still fall down and right.
+            fun y(at: Float) = (if (render.flipped) Geometry.HEIGHT - at else at) * unit
+            withTransform({ if (render.flipped) scale(1f, -1f, Offset(size.width / 2f, size.height / 2f)) }) {
+                drawBoard(render.variant, unit, glow, hair, rule)
+            }
 
             val breath = pulse.value
 
@@ -256,7 +266,7 @@ fun BackgammonBoard(
                 val at = Geometry.landing(render.variant, render.board, render.turn, place)
                 drawChecker(
                     player = render.turn,
-                    center = Offset(at.x * unit, at.y * unit),
+                    center = Offset(at.x * unit, y(at.y)),
                     unit = unit * at.scale * GHOST * (1f + PULSE_SWELL * breath),
                     fill = Grid.Yellow.copy(alpha = t),
                     outline = Grid.Ink.copy(alpha = t),
@@ -279,7 +289,7 @@ fun BackgammonBoard(
                 val lift = motion.lift
                 val offer = motion.offer.value
                 val scale = at.scale * (1f + LIFT_SWELL * lift) * (1f + PULSE_SWELL * breath * offer)
-                val center = Offset(at.x * unit, (at.y - LIFT * lift) * unit)
+                val center = Offset(at.x * unit, y(at.y) - LIFT * lift * unit)
                 val fill = lerp(checker.player.color, Grid.Yellow, motion.picked.value)
                 drawChecker(
                     player = checker.player,

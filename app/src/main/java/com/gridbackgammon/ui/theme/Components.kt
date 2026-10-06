@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -30,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -265,4 +269,44 @@ fun rememberBreath(active: Boolean): State<Float> {
         }
     }
     return breath.asState()
+}
+
+/** One line of text in a slab. The placeholder is a caption, so an empty field still says what it wants. */
+@Composable
+fun BrutalField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    height: Dp = 56.dp,
+) {
+    Box(modifier.height(height + GridTokens.ShadowSmall)) {
+        BrutalSlab(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height),
+            shadow = GridTokens.ShadowSmall,
+            contentPadding = PaddingValues(horizontal = GridTokens.GapWide),
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = textStyle.copy(color = Grid.Ink),
+                cursorBrush = SolidColor(Grid.Ink),
+                keyboardOptions = keyboardOptions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.CenterStart),
+                decorationBox = { field ->
+                    Box {
+                        if (value.isEmpty()) Caption(placeholder)
+                        field()
+                    }
+                },
+            )
+        }
+    }
 }

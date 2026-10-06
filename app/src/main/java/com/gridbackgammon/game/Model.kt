@@ -169,10 +169,18 @@ data class GameState(
     val paths: Map<Int, List<Step>> = emptyMap(),
     val note: Note = Note.NONE,
     val outcome: Outcome? = null,
+    /** Online: the side the other phone plays. Null on one phone or against the bot. */
+    val remote: Player? = null,
 ) {
     val vsBot: Boolean get() = bots.isNotEmpty()
 
-    val humanTurn: Boolean get() = turn !in bots && phase != Phase.OVER
+    val online: Boolean get() = remote != null
+
+    /** Whether the side on turn is played on this phone, by a person. */
+    val humanTurn: Boolean get() = turn !in bots && turn != remote && phase != Phase.OVER
+
+    /** The side at the bottom of the screen: Red, unless Red is the other phone's. */
+    val bottom: Player get() = if (remote == Player.RED) Player.BLUE else Player.RED
 
     /** Positions [turn] can pick a checker up from. */
     val sources: Set<Int> get() = legal.mapTo(HashSet()) { it.from }
