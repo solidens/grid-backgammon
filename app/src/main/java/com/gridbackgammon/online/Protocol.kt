@@ -53,7 +53,8 @@ enum class Result {
 sealed interface ClientMsg {
     /**
      * Open a room. Only this needs a licence: the friend who joins plays free.
-     * [game] is "chess" or "backgammon"; [variant] is "short" or "long" for the latter.
+     * [game] is "chess", "backgammon" or "ludo"; [variant] is "short" or "long"
+     * for backgammon, [count] the number of seats, 2 to 4, for ludo.
      */
     @Serializable @SerialName("create")
     data class Create(
@@ -61,6 +62,7 @@ sealed interface ClientMsg {
         val license: String,
         val side: SideChoice = SideChoice.RANDOM,
         val variant: String? = null,
+        val count: Int? = null,
         val protocol: Int = PROTOCOL,
     ) : ClientMsg
 
@@ -71,17 +73,24 @@ sealed interface ClientMsg {
     @Serializable @SerialName("resume")
     data class Resume(val token: String, val protocol: Int = PROTOCOL) : ClientMsg
 
-    /** [ply] is how many moves the game had before this one, so a stale or repeated send is refused. */
+    /**
+     * [ply] is how many moves the game had before this one, so a stale or
+     * repeated send is refused. In ludo [move] is the id of the token to move.
+     */
     @Serializable @SerialName("move")
     data class Move(val ply: Int, val move: String) : ClientMsg
 
-    /** Backgammon: throw the dice -- the opening throw, or the player on turn's. */
+    /** Backgammon and ludo: throw -- the opening throw, or the player on turn's. */
     @Serializable @SerialName("roll")
     data class Roll(val ply: Int) : ClientMsg
 
     /** Backgammon: the whole of a turn, each step "from to die" in the mover's own positions. */
     @Serializable @SerialName("turn")
     data class Turn(val ply: Int, val steps: List<String>) : ClientMsg
+
+    /** Ludo: the host starts with whoever has joined; empty seats are played by the server. */
+    @Serializable @SerialName("start")
+    data object Start : ClientMsg
 
     @Serializable @SerialName("resign")
     data object Resign : ClientMsg
@@ -100,9 +109,12 @@ sealed interface ClientMsg {
 
 @Serializable
 sealed interface ServerMsg {
-    /** Sent once a seat is taken; [token] is what [ClientMsg.Resume] needs. */
+    /**
+     * Sent once a seat is taken; [token] is what [ClientMsg.Resume] needs.
+     * Two-player games give a [color]; ludo gives the [seat], 0 being the host's.
+     */
     @Serializable @SerialName("seat")
-    data class Seat(val code: String, val token: String, val color: Color) : ServerMsg
+    data class Seat(val code: String, val token: String, val color: Color? = null, val seat: Int = 0) : ServerMsg
 
     /**
      * The whole room, every time anything in it changes. A game is short enough to resend.
@@ -110,12 +122,15 @@ sealed interface ServerMsg {
      * [moves] is the game's log: UCI moves in chess; in backgammon one entry per
      * event -- "o red blue" an opening throw, "r a b" a throw, "s from to die" a
      * step, "e" the end of a turn -- which replays through the rules to the
-     * position. In backgammon white is Red and black is Blue.
+     * position. In backgammon white is Red and black is Blue. In ludo one entry
+     * per event too: "r value" a throw, "m id" a token moved, "p" the turn passed
+     * because nothing could move.
      */
     @Serializable @SerialName("state")
     data class State(
         val code: String,
-        val color: Color,
+        /** Two-player games: which side this phone plays. */
+        val color: Color? = null,
         val status: Status,
         val moves: List<String>,
         val result: Result? = null,
@@ -125,6 +140,10 @@ sealed interface ServerMsg {
         /** Points won in this room so far, white's then black's. */
         val score: List<Int> = emptyList(),
         val variant: String? = null,
+        /** Ludo: this phone's seat, how many seats the game has, and who is in each. */
+        val seat: Int? = null,
+        val count: Int? = null,
+        val players: List<PlayerInfo> = emptyList(),
         val opponentOnline: Boolean = false,
         val drawOffer: Color? = null,
         val rematch: List<Color> = emptyList(),
@@ -133,6 +152,17 @@ sealed interface ServerMsg {
     @Serializable @SerialName("error")
     data class Error(val code: ErrorCode, val message: String) : ServerMsg
 }
+
+/** One ludo seat as the others see it. */
+@Serializable
+data class PlayerInfo(
+    /** Someone joined it -- false for a seat the server plays from the start. */
+    val human: Boolean,
+    val online: Boolean = false,
+    /** The server is playing it: the seat was empty, its player left, or has been away too long. */
+    val bot: Boolean = false,
+    val rematch: Boolean = false,
+)
 
 @Serializable
 enum class ErrorCode {
